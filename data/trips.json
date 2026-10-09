@@ -1,0 +1,10 @@
+[
+  {
+    "id": 1,
+    "car_id": 2,
+    "driver_id": 2,
+    "trip_date": "2026-11-10",
+    "distance": 90,
+    "passengers": 8
+  }
+]

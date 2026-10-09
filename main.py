@@ -1,112 +1,197 @@
-# Проверка готовности служебного автомобиля к одной поездке
+#Консольный интерфейс сервиса учета автомобилей организации.
 
-from datetime import date
+from copy import deepcopy
+from pathlib import Path
 
+from fleet import (
+    add_car, add_driver, check_car_capacity, filter_cars_by_capacity,
+    find_cars,
+    get_driver_status, get_service_status, sort_cars,
+)
+from storage import load_data, save_change
+from trips import (
+    ALLOWED, calculate_fuel, cancel_trip, check_trip, create_trip,
+    is_car_available, is_driver_available, reserved_distance,
+)
+from utils import input_date, input_int, input_number, input_permission
 
-def get_service_status(mileage, last_service_mileage, service_interval,
-                       trip_distance):
-    """Проверить срок ТО до выезда и на конец полного маршрута."""
-    if (mileage < 0 or last_service_mileage < 0
-            or last_service_mileage > mileage or service_interval <= 0
-            or trip_distance <= 0):
-        return "Ошибка: некорректные данные пробега или интервала ТО."
-    remaining = last_service_mileage + service_interval - mileage
-    if remaining <= 0:
-        return "Требуется обслуживание до выезда."
-    elif trip_distance >= remaining:
-        return "Поездка достигнет порога ТО: обслуживание нужно до выезда."
-    else:
-        return f"Обслуживание не требуется. До ТО: {remaining} км."
-
-
-def get_driver_status(driver_has_permission, driver_is_busy):
-    """Проверить допуск к автомобилю и занятость водителя."""
-    if not driver_has_permission:
-        return "Водитель не допущен к управлению этим автомобилем."
-    elif driver_is_busy:
-        return "Водитель уже занят в другой поездке."
-    else:
-        return "Водитель доступен для поездки."
-
-
-def get_trip_status(car_is_busy, driver_has_permission, driver_is_busy,
-                    mileage, last_service_mileage, service_interval,
-                    trip_distance):
-    """Вернуть решение о выезде; первый запрет определяет причину."""
-    if (mileage < 0 or last_service_mileage < 0
-            or last_service_mileage > mileage or service_interval <= 0
-            or trip_distance <= 0):
-        return "Поездка запрещена: некорректные исходные данные."
-    remaining = last_service_mileage + service_interval - mileage
-    if car_is_busy:
-        return "Поездка запрещена: автомобиль уже занят."
-    elif not driver_has_permission or driver_is_busy:
-        return "Поездка запрещена: водитель недоступен."
-    elif remaining <= 0:
-        return "Поездка запрещена: требуется обслуживание."
-    elif trip_distance >= remaining:
-        return "Поездка запрещена: маршрут достигнет порога ТО."
-    else:
-        return "Поездка разрешена."
+DATA_DIR = Path(__file__).resolve().parent / "data"
+MENU = """
+=== Сервис учета автомобилей организации ===
+1. Показать автомобили
+2. Добавить автомобиль
+3. Найти автомобиль по модели или госномеру
+4. Проверить пассажирскую вместимость
+5. Отобрать автомобили по вместимости
+6. Отсортировать автомобили по вместимости
+7. Показать водителей
+8. Добавить водителя
+9. Проверить доступность автомобиля и водителя на дату
+10. Проверить подготовку поездки
+11. Создать поездку
+12. Отменить поездку
+13. Показать поездки
+0. Выход
+"""
 
 
-def calculate_fuel(trip_distance, fuel_consumption):
-    """Рассчитать литры без округления; -1.0 означает ошибку данных."""
-    if trip_distance <= 0 or fuel_consumption <= 0:
-        return -1.0
-    return trip_distance * fuel_consumption / 100
+def show_cars(cars: list[dict]) -> None:
+    #Вывести ID, модель, госномер, вместимость и пробег автомобилей.
+    if not cars:
+        print("Автомобили не найдены.")
+    for car in cars:
+        print(f"{car['id']}: {car['model']} | {car['plate']} | "
+              f"мест: {car['capacity']} | пробег: {car['mileage']} км")
 
 
-def main():
-    #Cценарий подготовки одной поездки
-    car_model = "Lada Vesta"
-    car_plate = "А123ВС77"
-    driver_name = "Иванов Иван Иванович"
-    trip_date = date.today()
-    mileage = int("48000")
-    last_service_mileage = 40000
-    service_interval = 10000
-    trip_distance = int("120")
-    fuel_consumption = float("8.5")
-    car_is_busy = False
-    driver_has_permission = True
-    driver_is_busy = False
+def show_drivers(drivers: dict[int, dict]) -> None:
+    #Вывести список водителей и наличие общего допуска к автопарку.
+    if not drivers:
+        print("Водителей пока нет.")
+    for driver in drivers.values():
+        permission = "есть" if driver["has_permission"] else "нет"
+        print(f"{driver['id']}: {driver['name']} | допуск: {permission}")
 
-    service_status = get_service_status(
-        mileage, last_service_mileage, service_interval, trip_distance,
-    )
-    driver_status = get_driver_status(driver_has_permission, driver_is_busy)
-    trip_status = get_trip_status(
-        car_is_busy, driver_has_permission, driver_is_busy,
-        mileage, last_service_mileage, service_interval, trip_distance,
-    )
-    fuel_required = calculate_fuel(trip_distance, fuel_consumption)
 
-    print("СЕРВИС УЧЕТА АВТОМОБИЛЕЙ ОРГАНИЗАЦИИ")
-    print(f"Дата поездки: {trip_date:%d.%m.%Y}")
-    print(f"Автомобиль: {car_model}, госномер {car_plate}")
-    print(f"Водитель: {driver_name}")
-    print(f"Пробег: {mileage} км; последнее ТО: {last_service_mileage} км")
-    print(f"Интервал ТО: {service_interval} км")
-    print(f"Полный маршрут: {trip_distance} км")
-    print(f"Статус автомобиля: {'занят' if car_is_busy else 'свободен'}")
-    print(f"ТО: {service_status}")
-    print(f"Водитель: {driver_status}")
-    print(f"Решение: {trip_status}")
-    if fuel_required < 0:
-        print("Топливо: расчет невозможен, проверьте расстояние и расход.")
-    else:
-        print(f"Расход на 100 км: {fuel_consumption:.1f} л")
-        print(f"Плановая потребность в топливе: {fuel_required:.1f} л")
-    if trip_status == "Поездка разрешена.":
-        projected_mileage = mileage + trip_distance
-        remaining_after_trip = (
-            last_service_mileage + service_interval - projected_mileage
+def show_trips(data: dict) -> None:
+    #Вывести поездки, участников и расчет топлива.
+    if not data["trips"]:
+        print("Поездок пока нет.")
+    for trip in data["trips"]:
+        car = data["cars"][trip["car_id"]]
+        driver = data["drivers"][trip["driver_id"]]
+        fuel = calculate_fuel(trip["distance"], car["fuel_consumption"])
+        print(f"{trip['id']}: {trip['trip_date']} | {car['plate']} | "
+              f"{driver['name']} | {trip['distance']} км | "
+              f"пассажиров: {trip['passengers']} | топливо: {fuel:.1f} л")
+
+
+def input_assignment(data: dict) -> tuple[int, int, str]:
+    #Запросить существующие автомобиль, водителя и календарную дату.
+    car_id = input_int("ID автомобиля: ")
+    driver_id = input_int("ID водителя: ")
+    data["cars"][car_id]
+    data["drivers"][driver_id]
+    return car_id, driver_id, input_date("Дата (ГГГГ-ММ-ДД): ")
+
+
+def input_trip(data: dict) -> tuple[int, int, str, int, int]:
+    #Запросить участников, дату, полный маршрут и число пассажиров.
+    car_id, driver_id, trip_date = input_assignment(data)
+    distance = input_int("Расстояние полного маршрута, км: ")
+    passengers = input_int("Количество пассажиров без водителя: ")
+    return car_id, driver_id, trip_date, distance, passengers
+
+
+def show_trip_preview(data: dict, car_id: int, driver_id: int,
+                      trip_date: str, distance: int, passengers: int) -> None:
+    #вывести ТО, статус водителя, решение и расчет топлива.
+    car, driver = data["cars"][car_id], data["drivers"][driver_id]
+    mileage = car["mileage"] + reserved_distance(data["trips"], car_id)
+    print(f"Автомобиль: {car['model']}, {car['plate']}")
+    print(f"Водитель: {driver['name']}; дата: {trip_date}")
+    print(get_service_status(mileage, car["last_service_mileage"],
+                             car["service_interval"], distance))
+    print(get_driver_status(
+        driver["has_permission"],
+        not is_driver_available(data["trips"], driver_id, trip_date),
+    ))
+    status = check_trip(data["cars"], data["drivers"], data["trips"],
+                        car_id, driver_id, trip_date, distance, passengers)
+    print(status)
+    fuel = calculate_fuel(distance, car["fuel_consumption"])
+    print(f"Плановая потребность в топливе: {fuel:.1f} л")
+    if status == ALLOWED:
+        remaining = (car["last_service_mileage"] + car["service_interval"]
+                     - mileage - distance)
+        print(f"Пробег после всех поездок (прогноз): {mileage + distance} км")
+        print(f"До ТО после всех поездок (прогноз): {remaining} км")
+
+
+def handle_action(choice: str, data: dict, directory: Path) -> None:
+    #Выполнить пункт меню; сохранять изменения перед заменой в памяти.
+    cars, drivers, trips = data["cars"], data["drivers"], data["trips"]
+    if choice == "1":
+        show_cars(list(cars.values()))
+    elif choice == "2":
+        candidate = deepcopy(cars)
+        car = add_car(
+            candidate, input("Модель: "), input("Госномер: "),
+            input_int("Пассажирских мест без водителя: "),
+            input_int("Текущий пробег, км: ", 0),
+            input_int("Пробег последнего ТО, км: ", 0),
+            input_int("Интервал ТО, км: "),
+            input_number("Расход на 100 км, л: "),
         )
-        print(f"Пробег после поездки (прогноз): {projected_mileage} км")
-        print(f"До ТО после поездки (прогноз): {remaining_after_trip} км")
+        save_change(directory, data, "cars", candidate)
+        print(f"Автомобиль добавлен, ID: {car['id']}.")
+    elif choice == "3":
+        show_cars(find_cars(cars, input("Модель или госномер: ")))
+    elif choice == "4":
+        result = check_car_capacity(cars, input_int("ID автомобиля: "),
+                                    input_int("Количество пассажиров: "))
+        print("Мест достаточно." if result else "Мест недостаточно.")
+    elif choice == "5":
+        show_cars(filter_cars_by_capacity(
+            cars, input_int("Минимум пассажирских мест: "),
+        ))
+    elif choice == "6":
+        show_cars(sort_cars(cars))
+    elif choice == "7":
+        show_drivers(drivers)
+    elif choice == "8":
+        candidate = deepcopy(drivers)
+        driver = add_driver(candidate, input("ФИО водителя: "),
+                            input_permission("Допуск есть (да/нет): "))
+        save_change(directory, data, "drivers", candidate)
+        print(f"Водитель добавлен, ID: {driver['id']}.")
+    elif choice == "9":
+        car_id, driver_id, trip_date = input_assignment(data)
+        car_free = is_car_available(trips, car_id, trip_date)
+        driver_free = is_driver_available(trips, driver_id, trip_date)
+        print("Автомобиль свободен." if car_free else "Автомобиль занят.")
+        print("Водитель свободен." if driver_free else "Водитель занят.")
+    elif choice == "10":
+        show_trip_preview(data, *input_trip(data))
+    elif choice == "11":
+        candidate = deepcopy(trips)
+        trip = create_trip(cars, drivers, candidate, *input_trip(data))
+        save_change(directory, data, "trips", candidate)
+        print(f"Поездка создана, ID: {trip['id']}.")
+    elif choice == "12":
+        candidate = deepcopy(trips)
+        cancel_trip(candidate, input_int("ID поездки для отмены: "))
+        save_change(directory, data, "trips", candidate)
+        print("Поездка отменена.")
+    elif choice == "13":
+        show_trips(data)
     else:
-        print("Перед назначением поездки устраните указанную причину запрета.")
+        print("Неизвестный пункт меню. Выберите число от 0 до 13.")
+
+
+def main(directory: Path = DATA_DIR) -> None:
+    #Загрузить JSON и выполнить меню с обработкой ввода и ошибок файлов.
+    try:
+        data = load_data(directory)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        print(f"Не удалось загрузить данные: {error}")
+        print("Исправьте файлы JSON и повторите запуск; они не перезаписаны.")
+        return
+    try:
+        while True:
+            print(MENU)
+            choice = input("Выберите действие: ").strip()
+            if choice == "0":
+                print("Работа завершена.")
+                break
+            try:
+                handle_action(choice, data, directory)
+            except KeyError as error:
+                print(f"Запись с ID {error.args[0]} не найдена.")
+            except (ValueError, OSError) as error:
+                print(f"Ошибка: {error}")
+    except (EOFError, KeyboardInterrupt):
+        print("\nРабота завершена. Все ранее сохраненные изменения доступны.")
 
 
 if __name__ == "__main__":

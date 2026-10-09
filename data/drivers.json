@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "name": "Иванов Иван Иванович",
+    "has_permission": true
+  },
+  {
+    "id": 2,
+    "name": "Петров Петр Петрович",
+    "has_permission": true
+  },
+  {
+    "id": 3,
+    "name": "Сидоров Алексей Сергеевич",
+    "has_permission": false
+  }
+]

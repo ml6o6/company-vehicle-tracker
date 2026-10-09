@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "model": "Lada Vesta",
+    "plate": "А123ВС77",
+    "capacity": 4,
+    "mileage": 48000,
+    "last_service_mileage": 40000,
+    "service_interval": 10000,
+    "fuel_consumption": 8.5
+  },
+  {
+    "id": 2,
+    "model": "ГАЗель NEXT",
+    "plate": "В456ЕК77",
+    "capacity": 12,
+    "mileage": 25000,
+    "last_service_mileage": 20000,
+    "service_interval": 10000,
+    "fuel_consumption": 12.0
+  },
+  {
+    "id": 3,
+    "model": "Lada Granta",
+    "plate": "М789ОР77",
+    "capacity": 4,
+    "mileage": 50000,
+    "last_service_mileage": 40000,
+    "service_interval": 10000,
+    "fuel_consumption": 7.5
+  }
+]
