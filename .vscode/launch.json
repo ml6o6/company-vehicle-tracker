@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "ПР2: учет автомобилей",
+      "name": "ПР3: учет автомобилей",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/main.py",

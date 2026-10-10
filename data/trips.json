@@ -5,6 +5,7 @@
     "driver_id": 2,
     "trip_date": "2026-11-10",
     "distance": 90,
-    "passengers": 8
+    "passengers": 8,
+    "is_cancelled": false
   }
 ]

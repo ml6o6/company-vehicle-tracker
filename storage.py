@@ -1,15 +1,16 @@
-#Загрузка и сохранение коллекций JSON с проверкой целостности.
+"""Преобразование JSON в объекты и сохранение связей по ID."""
 
 import json
 from pathlib import Path
 
-from fleet import validate_car, validate_driver
-from trips import create_trip
-from utils import require_int
+from models import Car, Driver, Trip
+from models.cars import find_car_by_id
+from models.drivers import find_driver_by_id
+from models.trips import ALLOWED, check_trip
 
 
 def load_json(filename: Path) -> list[dict]:
-    #Прочитать список записей; отсутствие файла означает пустой список.
+    """Прочитать список записей; отсутствие файла означает пустой список."""
     try:
         with filename.open(encoding="utf-8") as stream:
             records = json.load(stream)
@@ -36,44 +37,80 @@ def save_json(filename: Path, records: list[dict]) -> None:
         temporary.unlink(missing_ok=True)
 
 
-def index_records(records: list[dict]) -> dict[int, dict]:
-    """Построить словарь по положительным ID; запретить повтор ID."""
-    indexed = {}
-    for record in records:
-        record_id = require_int(record["id"], "ID записи", 1)
-        if record_id in indexed:
-            raise ValueError(f"Повтор ID: {record_id}.")
-        indexed[record_id] = record
-    return indexed
+def check_unique_ids(objects: list[Car] | list[Driver] | list[Trip]) -> None:
+    """Запретить повтор идентификаторов в одной коллекции объектов."""
+    ids = [item.id for item in objects]
+    if len(set(ids)) != len(ids):
+        raise ValueError("Повтор ID в файле данных.")
 
 
-def load_data(directory: Path) -> dict:
-    """Восстановить коллекции; проверить поля, связи и доступность."""
-    cars = index_records(load_json(directory / "cars.json"))
-    drivers = index_records(load_json(directory / "drivers.json"))
-    trips = load_json(directory / "trips.json")
-    for car in cars.values():
-        validate_car(car)
-    plates = [car["plate"].strip().casefold() for car in cars.values()]
+def load_cars(filename: Path) -> list[Car]:
+    """Восстановить автомобили вместе с их объектами обслуживания."""
+    cars = [Car.from_data(record) for record in load_json(filename)]
+    check_unique_ids(cars)
+    plates = [car.plate.casefold() for car in cars]
     if len(set(plates)) != len(plates):
         raise ValueError("В файле автомобилей повторяются госномера.")
-    for driver in drivers.values():
-        validate_driver(driver)
-    index_records(trips)
-    checked = []
-    for trip in trips:
-        created = create_trip(
-            cars, drivers, checked, trip["car_id"], trip["driver_id"],
-            trip["trip_date"], trip["distance"], trip["passengers"],
-        )
-        created["id"] = trip["id"]
-    return dict(cars=cars, drivers=drivers, trips=trips)
+    return cars
 
 
-def save_change(directory: Path, data: dict, collection: str,
-                candidate: dict | list) -> None:
-    """Сначала сохранить измененную коллекцию, затем обновить память."""
-    records = (list(candidate.values())
-               if isinstance(candidate, dict) else candidate)
-    save_json(directory / f"{collection}.json", records)
-    data[collection] = candidate
+def load_drivers(filename: Path) -> list[Driver]:
+    """Восстановить водителей через фабричный метод класса."""
+    drivers = [Driver.from_data(record) for record in load_json(filename)]
+    check_unique_ids(drivers)
+    return drivers
+
+
+def load_trips(filename: Path, cars: list[Car],
+               drivers: list[Driver]) -> list[Trip]:
+    """Восстановить ссылки на существующие объекты и состояние отмены."""
+    trips = []
+    for record in load_json(filename):
+        car = find_car_by_id(cars, record["car_id"])
+        driver = find_driver_by_id(drivers, record["driver_id"])
+        trip = Trip(record["id"], car, driver, record["trip_date"],
+                    record["distance"], record["passengers"],
+                    record.get("is_cancelled", False))
+        if not trip.is_cancelled:
+            status = check_trip(trips, car, driver, trip.trip_date,
+                                trip.distance, trip.passengers)
+            if status != ALLOWED:
+                raise ValueError(f"Поездка {trip.id}: {status}")
+        trips.append(trip)
+    check_unique_ids(trips)
+    return trips
+
+
+def load_data(directory: Path) -> tuple[list[Car], list[Driver], list[Trip]]:
+    """Сначала загрузить участников, затем восстановить связанные поездки."""
+    cars = load_cars(directory / "cars.json")
+    drivers = load_drivers(directory / "drivers.json")
+    trips = load_trips(directory / "trips.json", cars, drivers)
+    return cars, drivers, trips
+
+
+def save_cars(filename: Path, cars: list[Car]) -> None:
+    """Сохранить автомобили в совместимом с ПР2 формате."""
+    records = [dict(id=car.id, model=car.model, plate=car.plate,
+                    capacity=car.capacity, mileage=car.mileage,
+                    last_service_mileage=car.maintenance.last_mileage,
+                    service_interval=car.maintenance.interval,
+                    fuel_consumption=car.fuel_consumption) for car in cars]
+    save_json(filename, records)
+
+
+def save_drivers(filename: Path, drivers: list[Driver]) -> None:
+    """Сохранить необходимые поля объектов водителей."""
+    records = [dict(id=driver.id, name=driver.name,
+                    has_permission=driver.has_permission)
+               for driver in drivers]
+    save_json(filename, records)
+
+
+def save_trips(filename: Path, trips: list[Trip]) -> None:
+    """Сохранить ID участников и признак отмены, без вложенных объектов."""
+    records = [dict(id=trip.id, car_id=trip.car.id, driver_id=trip.driver.id,
+                    trip_date=trip.trip_date, distance=trip.distance,
+                    passengers=trip.passengers, is_cancelled=trip.is_cancelled)
+               for trip in trips]
+    save_json(filename, records)
