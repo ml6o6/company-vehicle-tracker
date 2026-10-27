@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if trip %}
+        Поездка №{{ trip.id }} — Учет автомобилей
+    {% else %}
+        Поездка не найдена — Учет автомобилей
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% if trip %}
+        <h1>Поездка №{{ trip.id }}</h1>
+        <div class="card">
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Дата</dt>
+                    <dd class="col-sm-8">{{ trip.trip_date }}</dd>
+                    <dt class="col-sm-4">Автомобиль</dt>
+                    <dd class="col-sm-8">
+                        <a href="{% url 'cars:car_detail' trip.car.id %}">
+                            {{ trip.car.model }} · {{ trip.car.plate }}
+                        </a>
+                    </dd>
+                    <dt class="col-sm-4">Водитель</dt>
+                    <dd class="col-sm-8">{{ trip.driver.name }}</dd>
+                    <dt class="col-sm-4">Допуск водителя</dt>
+                    <dd class="col-sm-8">
+                        {% if trip.driver.has_permission %}есть{% else %}нет{% endif %}
+                    </dd>
+                    <dt class="col-sm-4">Расстояние</dt>
+                    <dd class="col-sm-8">{{ trip.distance }} км</dd>
+                    <dt class="col-sm-4">Пассажиров</dt>
+                    <dd class="col-sm-8">{{ trip.passengers }}</dd>
+                    <dt class="col-sm-4">Требуется топлива</dt>
+                    <dd class="col-sm-8">{{ fuel_required|floatformat:"1u" }} л</dd>
+                    <dt class="col-sm-4">Статус</dt>
+                    <dd class="col-sm-8">
+                        {% include "trips/includes/trip_status.html" %}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    {% else %}
+        <h1 class="text-danger">Поездка не найдена</h1>
+        <p>Поездка с указанным идентификатором отсутствует.</p>
+    {% endif %}
+    <a class="btn btn-outline-secondary mt-3" href="{% url 'trips:trips' %}">
+        К списку поездок
+    </a>
+{% endblock %}

@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -10,25 +11,30 @@
         integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
         crossorigin="anonymous"
     >
-    <style>
-        body { background: #f5f7fa; color: #243247; }
-        .site-nav { background: #fff; border-bottom: 1px solid #dee2e6; }
-        .nav-link { font-weight: 500; }
-        main { padding-top: 2rem; padding-bottom: 3rem; }
-        h1 { margin-bottom: 1.5rem; overflow-wrap: anywhere; }
-        .card, .list-group { overflow-wrap: anywhere; }
-    </style>
+    <link rel="stylesheet" href="{% static 'homepage/css/style.css' %}">
 </head>
 <body>
-    <header class="site-nav">
-        <nav class="container nav flex-wrap py-3" aria-label="Основная навигация">
-            <a class="nav-link" href="{% url 'homepage:index' %}">Главная</a>
-            <a class="nav-link" href="{% url 'cars:cars' %}">Автомобили</a>
-            <a class="nav-link" href="{% url 'trips:trips' %}">Поездки</a>
-        </nav>
+    <header class="site-header">
+        <div class="container d-flex flex-wrap align-items-center justify-content-between gap-3 py-3">
+            <a class="site-brand" href="{% url 'homepage:index' %}">
+                <img
+                    src="{% static 'homepage/img/logo.svg' %}"
+                    alt="Логотип сервиса учета автомобилей"
+                    class="site-logo"
+                    width="120"
+                    height="64"
+                >
+                <span>Учет автомобилей</span>
+            </a>
+            {% include "includes/navigation.html" %}
+        </div>
     </header>
     <main class="container">
         {% block content %}{% endblock %}
     </main>
+    <footer class="container site-footer">
+        <p>© <span id="current-year"></span> Сервис учета автомобилей организации</p>
+    </footer>
+    <script src="{% static 'homepage/js/main.js' %}"></script>
 </body>
 </html>

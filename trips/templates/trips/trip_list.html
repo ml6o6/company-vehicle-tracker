@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Поездки — Учет автомобилей{% endblock %}
+
+{% block content %}
+    <h1>Поездки</h1>
+    <p>Всего поездок: {{ trips|length }}</p>
+    <ul class="list-group">
+        {% for trip in trips %}
+            <li class="list-group-item py-3">
+                <div class="d-flex flex-wrap justify-content-between gap-2">
+                    <a class="fw-semibold" href="{% url 'trips:trip_detail' trip.id %}">
+                        Поездка №{{ trip.id }} · {{ trip.trip_date }}
+                    </a>
+                    {% include "trips/includes/trip_status.html" %}
+                </div>
+                <p class="mb-0 text-secondary">
+                    {{ trip.car.model }} · {{ trip.car.plate }} · {{ trip.driver.name }}
+                </p>
+            </li>
+        {% empty %}
+            <li class="list-group-item">Поездок пока нет.</li>
+        {% endfor %}
+    </ul>
+{% endblock %}

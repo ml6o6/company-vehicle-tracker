@@ -4,6 +4,7 @@
 
 {% block content %}
     <h1>Автомобили</h1>
+    <p>Всего автомобилей: {{ cars|length }}</p>
     {% for car in cars %}
         {% include "cars/includes/car_card.html" %}
     {% empty %}

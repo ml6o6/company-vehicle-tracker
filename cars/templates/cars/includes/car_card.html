@@ -1,6 +1,6 @@
-<article class="card mb-3">
+<article class="card car-card mb-3">
     <div class="card-body">
-        <h2 class="h4 card-title">{{ car.model }} · {{ car.plate }}</h2>
+        <h2 class="h4 card-title">{{ car.model|default:"Без названия" }} · {{ car.plate }}</h2>
         <p class="card-text">Пассажирских мест: {{ car.capacity }}</p>
         <p class="card-text">Пробег: {{ car.mileage }} км</p>
         <a class="btn btn-primary" href="{% url 'cars:car_detail' car.id %}">

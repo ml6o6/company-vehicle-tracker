@@ -1,4 +1,4 @@
-# Проверки веб-слоя ПР5 и первого этапа ПР6
+# Проверки веб-слоя и шаблонов ПР6
 
 import os
 from datetime import date
@@ -6,6 +6,8 @@ from html.parser import HTMLParser
 
 import django
 import pytest
+from django.contrib.staticfiles import finders
+from django.template.loader import render_to_string
 from django.test import Client, override_settings
 from django.test.utils import setup_test_environment, teardown_test_environment
 from django.urls import resolve, reverse
@@ -187,6 +189,11 @@ def template_environment():
     ("/cars/1/", "cars/car_detail.html", 200),
     ("/cars/999/", "cars/car_detail.html", 404),
     ("/cars/0/", "cars/car_detail.html", 404),
+    ("/trips/", "trips/trip_list.html", 200),
+    ("/trips/1/", "trips/trip_detail.html", 200),
+    ("/trips/999/", "trips/trip_detail.html", 404),
+    ("/trips/0/", "trips/trip_detail.html", 404),
+    ("/nonexistent/", "404.html", 404),
 ])
 def test_template_inheritance(web, template_environment,
                               url, template, status):
@@ -194,7 +201,13 @@ def test_template_inheritance(web, template_environment,
     response = client.get(url)
     names = {item.name for item in response.templates}
     assert response.status_code == status
-    assert {template, "base.html"} <= names
+    assert {template, "base.html",
+            "includes/navigation.html"} <= names
+    html = response.content.decode()
+    assert 'href="/static/homepage/css/style.css"' in html
+    assert 'src="/static/homepage/img/logo.svg"' in html
+    assert 'src="/static/homepage/js/main.js"' in html
+    assert 'id="current-year"' in html
     if url == "/cars/":
         assert "cars/includes/car_card.html" in names
         assert 'href="/cars/1/"' in response.content.decode()
@@ -215,3 +228,52 @@ def test_car_objects_and_missing_context(web, template_environment):
     missing = client.get("/cars/999/")
     assert missing.context["car"] is None
     assert missing.status_code == 404
+
+
+def test_trip_context_and_shared_status(web, template_environment):
+    client, _, _, _ = web
+    listing = client.get("/trips/")
+    assert all(isinstance(trip, Trip) for trip in listing.context["trips"])
+    assert "trips/includes/trip_status.html" in {
+        item.name for item in listing.templates
+    }
+    for trip_id, cancelled in ((1, False), (2, True)):
+        detail = client.get(f"/trips/{trip_id}/")
+        trip = detail.context["trip"]
+        assert isinstance(trip.car, Car)
+        assert isinstance(trip.driver, Driver)
+        assert trip.is_cancelled is cancelled
+        assert "trips/includes/trip_status.html" in {
+            item.name for item in detail.templates
+        }
+    missing = client.get("/trips/999/")
+    assert missing.context["trip"] is None
+    assert missing.status_code == 404
+
+
+def test_template_count_filters(web):
+    client, directory, _, _ = web
+    assert "Всего автомобилей: 2" in client.get("/cars/").content.decode()
+    assert "Всего поездок: 2" in client.get("/trips/").content.decode()
+    save_cars(directory / "cars.json", [])
+    save_trips(directory / "trips.json", [])
+    assert "Всего автомобилей: 0" in client.get("/cars/").content.decode()
+    assert "Всего поездок: 0" in client.get("/trips/").content.decode()
+
+
+def test_default_filter_preserves_model_validation(web):
+    _, _, cars, _ = web
+    cars[0].model = ""
+    html = render_to_string("cars/includes/car_card.html", {"car": cars[0]})
+    assert "Без названия" in html
+    with pytest.raises(ValueError):
+        Car(3, "", "Т123ЕС77", 4, 1000, 0, 10000, 7.5)
+
+
+@pytest.mark.parametrize("name", [
+    "homepage/css/style.css",
+    "homepage/js/main.js",
+    "homepage/img/logo.svg",
+])
+def test_static_files_discovered(name):
+    assert finders.find(name) is not None

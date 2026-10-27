@@ -1,0 +1,5 @@
+{% if trip.is_cancelled %}
+    <span class="badge bg-secondary trip-status trip-status-cancelled">отменена</span>
+{% else %}
+    <span class="badge bg-success trip-status trip-status-active">активна</span>
+{% endif %}
