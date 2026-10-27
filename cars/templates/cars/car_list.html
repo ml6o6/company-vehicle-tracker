@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Автомобили — Учет автомобилей{% endblock %}
+
+{% block content %}
+    <h1>Автомобили</h1>
+    {% for car in cars %}
+        {% include "cars/includes/car_card.html" %}
+    {% empty %}
+        <p>Автомобилей пока нет.</p>
+    {% endfor %}
+{% endblock %}

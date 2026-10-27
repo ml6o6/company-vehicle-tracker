@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Учет автомобилей{% endblock %}</title>
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+        crossorigin="anonymous"
+    >
+    <style>
+        body { background: #f5f7fa; color: #243247; }
+        .site-nav { background: #fff; border-bottom: 1px solid #dee2e6; }
+        .nav-link { font-weight: 500; }
+        main { padding-top: 2rem; padding-bottom: 3rem; }
+        h1 { margin-bottom: 1.5rem; overflow-wrap: anywhere; }
+        .card, .list-group { overflow-wrap: anywhere; }
+    </style>
+</head>
+<body>
+    <header class="site-nav">
+        <nav class="container nav flex-wrap py-3" aria-label="Основная навигация">
+            <a class="nav-link" href="{% url 'homepage:index' %}">Главная</a>
+            <a class="nav-link" href="{% url 'cars:cars' %}">Автомобили</a>
+            <a class="nav-link" href="{% url 'trips:trips' %}">Поездки</a>
+        </nav>
+    </header>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

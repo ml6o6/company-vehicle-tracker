@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Главная — Учет автомобилей{% endblock %}
+
+{% block content %}
+    <h1>Сервис учета автомобилей организации</h1>
+    <p class="lead">Служебный автопарк и запланированные поездки.</p>
+    <p>
+        Просматривайте автомобили, параметры обслуживания и поездки
+        с назначенными водителями.
+    </p>
+    <div class="row g-4 mt-2">
+        <section class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h4">Автомобили</h2>
+                    <p>Модель, госномер, вместимость, пробег и доступность.</p>
+                    <a class="btn btn-primary" href="{% url 'cars:cars' %}">
+                        Открыть автопарк
+                    </a>
+                </div>
+            </div>
+        </section>
+        <section class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h4">Поездки</h2>
+                    <p>Маршрут, дата, водитель и статус каждой поездки.</p>
+                    <a class="btn btn-outline-primary" href="{% url 'trips:trips' %}">
+                        Открыть поездки
+                    </a>
+                </div>
+            </div>
+        </section>
+    </div>
+{% endblock %}

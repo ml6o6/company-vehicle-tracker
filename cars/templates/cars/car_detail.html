@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if car %}
+        {{ car.model }} — Учет автомобилей
+    {% else %}
+        Автомобиль не найден — Учет автомобилей
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% if car %}
+        <h1>{{ car.model }}</h1>
+        <div class="card">
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">ID</dt>
+                    <dd class="col-sm-7">{{ car.id }}</dd>
+                    <dt class="col-sm-5">Госномер</dt>
+                    <dd class="col-sm-7">{{ car.plate }}</dd>
+                    <dt class="col-sm-5">Пассажирских мест</dt>
+                    <dd class="col-sm-7">{{ car.capacity }} (без водителя)</dd>
+                    <dt class="col-sm-5">Пробег</dt>
+                    <dd class="col-sm-7">{{ car.mileage }} км</dd>
+                    <dt class="col-sm-5">Расход топлива</dt>
+                    <dd class="col-sm-7">{{ car.fuel_consumption }} л / 100 км</dd>
+                    <dt class="col-sm-5">Последнее ТО</dt>
+                    <dd class="col-sm-7">{{ car.maintenance.last_mileage }} км</dd>
+                    <dt class="col-sm-5">Интервал ТО</dt>
+                    <dd class="col-sm-7">{{ car.maintenance.interval }} км</dd>
+                    <dt class="col-sm-5">Остаток до ТО по пробегу</dt>
+                    <dd class="col-sm-7">{{ service_remaining }} км</dd>
+                </dl>
+                <p>
+                    Занятость на сегодня ({{ today }}):
+                    {% if available %}
+                        <span class="badge bg-success">свободен</span>
+                    {% else %}
+                        <span class="badge bg-danger">занят</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    {% else %}
+        <h1 class="text-danger">Автомобиль не найден</h1>
+        <p>Автомобиль с указанным идентификатором отсутствует.</p>
+    {% endif %}
+    <a class="btn btn-outline-secondary mt-3" href="{% url 'cars:cars' %}">
+        К списку автомобилей
+    </a>
+{% endblock %}

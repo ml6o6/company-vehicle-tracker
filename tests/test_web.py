@@ -1,4 +1,4 @@
-# Проверки веб-слоя ПР5
+# Проверки веб-слоя ПР5 и первого этапа ПР6
 
 import os
 from datetime import date
@@ -7,6 +7,7 @@ from html.parser import HTMLParser
 import django
 import pytest
 from django.test import Client, override_settings
+from django.test.utils import setup_test_environment, teardown_test_environment
 from django.urls import resolve, reverse
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "vehicle_site.settings")
@@ -168,3 +169,49 @@ def test_navigation_and_read_only(web):
         assert client.post(url).status_code == 405
     assert before == {p.name: p.read_bytes()
                       for p in directory.glob("*.json")}
+
+
+@pytest.fixture
+def template_environment():
+    """Включить захват шаблонов и контекста штатными средствами Django."""
+    setup_test_environment()
+    try:
+        yield
+    finally:
+        teardown_test_environment()
+
+
+@pytest.mark.parametrize("url, template, status", [
+    ("/", "homepage/index.html", 200),
+    ("/cars/", "cars/car_list.html", 200),
+    ("/cars/1/", "cars/car_detail.html", 200),
+    ("/cars/999/", "cars/car_detail.html", 404),
+    ("/cars/0/", "cars/car_detail.html", 404),
+])
+def test_template_inheritance(web, template_environment,
+                              url, template, status):
+    client, _, _, _ = web
+    response = client.get(url)
+    names = {item.name for item in response.templates}
+    assert response.status_code == status
+    assert {template, "base.html"} <= names
+    if url == "/cars/":
+        assert "cars/includes/car_card.html" in names
+        assert 'href="/cars/1/"' in response.content.decode()
+        assert 'href="/cars/2/"' in response.content.decode()
+
+
+def test_car_objects_and_missing_context(web, template_environment):
+    client, _, _, _ = web
+    listing = client.get("/cars/")
+    assert all(isinstance(car, Car) for car in listing.context["cars"])
+    detail = client.get("/cars/2/")
+    car = detail.context["car"]
+    assert isinstance(car, Car)
+    assert car.id == 2
+    assert detail.context["available"] is False
+    assert detail.context["service_remaining"] == 5000
+    assert "занят</span>" in detail.content.decode()
+    missing = client.get("/cars/999/")
+    assert missing.context["car"] is None
+    assert missing.status_code == 404

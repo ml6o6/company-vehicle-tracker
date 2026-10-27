@@ -1,6 +1,7 @@
 # Главная страница, общий HTML-каркас и страница ошибки 404
 
 from django.http import HttpRequest, HttpResponse
+from django.shortcuts import render
 from django.urls import reverse
 from django.utils.html import escape
 from django.views.decorators.http import require_safe
@@ -52,36 +53,8 @@ def page(title: str, content: str) -> str:
 
 @require_safe
 def index(request: HttpRequest) -> HttpResponse:
-    """Показать назначение сервиса и ссылки на основные разделы."""
-    cars_url = reverse("cars:cars")
-    trips_url = reverse("trips:trips")
-    content = f"""
-    <h1>Сервис учета автомобилей организации</h1>
-    <p class="lead">Служебный автопарк и запланированные поездки.</p>
-    <p>Просматривайте автомобили, параметры обслуживания и поездки
-       с назначенными водителями.</p>
-    <div class="row g-4 mt-2">
-        <section class="col-md-6">
-            <div class="card h-100"><div class="card-body">
-                <h2 class="h4">Автомобили</h2>
-                <p>Модель, госномер, вместимость, пробег и доступность.</p>
-                <a class="btn btn-primary" href="{cars_url}">
-                    Открыть автопарк
-                </a>
-            </div></div>
-        </section>
-        <section class="col-md-6">
-            <div class="card h-100"><div class="card-body">
-                <h2 class="h4">Поездки</h2>
-                <p>Маршрут, дата, водитель и статус каждой поездки.</p>
-                <a class="btn btn-outline-primary" href="{trips_url}">
-                    Открыть поездки
-                </a>
-            </div></div>
-        </section>
-    </div>
-    """
-    return HttpResponse(page("Главная", content))
+    """Показать главную страницу через дочерний Django-шаблон."""
+    return render(request, "homepage/index.html")
 
 
 def page_not_found(request: HttpRequest, exception: Exception
