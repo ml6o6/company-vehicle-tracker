@@ -18,22 +18,22 @@
                     <dd class="col-sm-8">{{ trip.trip_date }}</dd>
                     <dt class="col-sm-4">Автомобиль</dt>
                     <dd class="col-sm-8">
-                        <a href="{% url 'cars:car_detail' trip.car.id %}">
-                            {{ trip.car.model }} · {{ trip.car.plate }}
+                        <a href="{% url 'cars:car_detail' trip.car_id %}">
+                            {{ trip.car_model }} · {{ trip.car_plate }}
                         </a>
                     </dd>
                     <dt class="col-sm-4">Водитель</dt>
-                    <dd class="col-sm-8">{{ trip.driver.name }}</dd>
+                    <dd class="col-sm-8">{{ trip.driver_name }}</dd>
                     <dt class="col-sm-4">Допуск водителя</dt>
                     <dd class="col-sm-8">
-                        {% if trip.driver.has_permission %}есть{% else %}нет{% endif %}
+                        {% if trip.has_permission %}есть{% else %}нет{% endif %}
                     </dd>
                     <dt class="col-sm-4">Расстояние</dt>
                     <dd class="col-sm-8">{{ trip.distance }} км</dd>
                     <dt class="col-sm-4">Пассажиров</dt>
                     <dd class="col-sm-8">{{ trip.passengers }}</dd>
                     <dt class="col-sm-4">Требуется топлива</dt>
-                    <dd class="col-sm-8">{{ fuel_required|floatformat:"1u" }} л</dd>
+                    <dd class="col-sm-8">{{ trip.fuel_required|floatformat:"1u" }} л</dd>
                     <dt class="col-sm-4">Статус</dt>
                     <dd class="col-sm-8">
                         {% include "trips/includes/trip_status.html" %}

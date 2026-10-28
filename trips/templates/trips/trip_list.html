@@ -4,7 +4,13 @@
 
 {% block content %}
     <h1>Поездки</h1>
-    <p>Всего поездок: {{ trips|length }}</p>
+    {% if active_only %}
+        <p><a href="{% url 'trips:trips' %}">Все поездки</a></p>
+        <p>Активных поездок: {{ trips|length }}</p>
+    {% else %}
+        <p><a href="{% url 'trips:trips' %}?status=active">Только активные</a></p>
+        <p>Всего поездок: {{ trips|length }}</p>
+    {% endif %}
     <ul class="list-group">
         {% for trip in trips %}
             <li class="list-group-item py-3">
@@ -15,7 +21,7 @@
                     {% include "trips/includes/trip_status.html" %}
                 </div>
                 <p class="mb-0 text-secondary">
-                    {{ trip.car.model }} · {{ trip.car.plate }} · {{ trip.driver.name }}
+                    {{ trip.car_model }} · {{ trip.car_plate }} · {{ trip.driver_name }}
                 </p>
             </li>
         {% empty %}

@@ -4,10 +4,32 @@
 
 {% block content %}
     <h1>Автомобили</h1>
-    <p>Всего автомобилей: {{ cars|length }}</p>
-    {% for car in cars %}
-        {% include "cars/includes/car_card.html" %}
-    {% empty %}
-        <p>Автомобилей пока нет.</p>
-    {% endfor %}
+    <p><a href="{% url 'cars:available' %}">Найти свободный автомобиль</a></p>
+    <form method="get" action="{% url 'cars:cars' %}" class="mb-3">
+        <label for="capacity" class="form-label">Минимум пассажирских мест</label>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <input id="capacity" name="capacity" type="number" min="1"
+                   value="{{ capacity }}" class="form-control w-auto">
+            <button class="btn btn-primary" type="submit">Отобрать</button>
+            <a href="{% url 'cars:cars' %}">Сбросить</a>
+        </div>
+    </form>
+    {% if error %}
+        <p class="alert alert-warning" role="alert">{{ error }}</p>
+    {% else %}
+        {% if capacity %}
+            <p>Найдено автомобилей: {{ cars|length }}</p>
+        {% else %}
+            <p>Всего автомобилей: {{ cars|length }}</p>
+        {% endif %}
+        {% for car in cars %}
+            {% include "cars/includes/car_card.html" %}
+        {% empty %}
+            {% if capacity %}
+                <p>Нет автомобилей с такой вместимостью.</p>
+            {% else %}
+                <p>Автомобилей пока нет.</p>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
 {% endblock %}

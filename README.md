@@ -2,7 +2,7 @@
 
 ## Назначение
 
-Сервис для учета автопарка и планирования служебных поездок. Консольная версия ПР3 дополнена веб-интерфейсом на Django 5.2. В ПР6 веб-интерфейс переведен на Django-шаблоны.
+Сервис для учета автопарка и планирования служебных поездок. Консольная версия ПР3 дополнена веб-интерфейсом на Django 5.2. В ПР6 веб-интерфейс переведен на Django-шаблоны. В ПР7 сайт получает данные из SQLite.
 
 Консольная версия позволяет:
 
@@ -15,14 +15,14 @@
 - создавать, отменять и просматривать поездки;
 - сохранять данные между запусками.
 
-В браузере доступны списки и карточки автомобилей и поездок, а также занятость автомобиля на текущую дату.
+В браузере доступны списки и карточки автомобилей и поездок, отбор по вместимости и статусу, поиск свободных машин по дате и статистика поездок.
 
 ## Используемые технологии
 
 - Python и Django 5.2;
 - HTML, CSS, JavaScript и Bootstrap 5.3;
 - Django Template Language (DTL);
-- JSON для данных предметной области;
+- SQLite и `sqlite3` для веб-версии, JSON для консольной версии;
 - pytest и flake8.
 
 ## Целевая аудитория
@@ -120,15 +120,17 @@
 | URL | View-функция | Назначение |
 | --- | --- | --- |
 | `/` | `homepage.views.index()` | Главная и навигация |
-| `/cars/` | `cars.views.cars()` | Список автомобилей |
+| `/cars/` | `cars.views.cars()` | Список автомобилей и отбор по вместимости |
+| `/cars/available/` | `cars.views.available()` | Поиск свободных автомобилей на дату |
 | `/cars/<int:car_id>/` | `cars.views.car_detail()` | Карточка автомобиля и занятость сегодня |
-| `/trips/` | `trips.views.trips()` | Список активных и отмененных поездок |
+| `/trips/` | `trips.views.trips()` | Все поездки или только активные |
+| `/trips/statistics/` | `trips.views.statistics()` | Итоги поездок, статистика по автомобилям и водителям |
 | `/trips/<int:trip_id>/` | `trips.views.trip_detail()` | Карточка поездки с автомобилем и водителем |
 
 Все страницы используют `render()` и наследуют `templates/base.html`
-с блоками `title` и `content`. Представления загружают объекты из JSON
-и передают их в шаблоны через контекст; HTML в Python больше не формируется,
-функция `page()` удалена.
+с блоками `title` и `content`. Представления выполняют SQL через `sqlite3`
+и передают строки `sqlite3.Row` в контекст шаблона. Поля доступны по именам
+столбцов и псевдонимам, например `trip.driver_name`.
 
 Шаблоны используют:
 
@@ -174,7 +176,7 @@
 
 ## Хранение данных
 
-Данные хранятся в JSON-файлах:
+Консольная версия читает и сохраняет JSON-файлы:
 
 - `data/cars.json`;
 - `data/drivers.json`;
@@ -184,7 +186,40 @@
 
 В памяти поездка хранит ссылки `car` и `driver` на объекты участников. В JSON сохраняются их идентификаторы `car_id` и `driver_id`, а также признак `is_cancelled`.
 
-Данные предметной области пока хранятся в JSON. Django ORM и веб-формы еще не используются; работа с базой данных приложения относится к следующим практическим работам.
+### SQLite в ПР7
+
+Веб-версия читает `data/fleet.sqlite` через `db/database.py`. Эта база
+отдельна от служебной базы Django. Схема определена в `sql/schema.sql`.
+
+| Таблица | Поля и типы | Ключи |
+| --- | --- | --- |
+| `cars` | `id INTEGER`, `model TEXT`, `plate TEXT`, `capacity INTEGER`, `mileage INTEGER`, `fuel_consumption REAL` | PK `id`, уникальный `plate` |
+| `drivers` | `id INTEGER`, `name TEXT`, `has_permission INTEGER` | PK `id` |
+| `maintenance` | `car_id INTEGER`, `last_mileage INTEGER`, `interval INTEGER` | PK `car_id`, FK → `cars.id` |
+| `trips` | `id INTEGER`, `car_id INTEGER`, `driver_id INTEGER`, `trip_date TEXT`, `distance INTEGER`, `passengers INTEGER`, `is_cancelled INTEGER` | PK `id`, FK `car_id` → `cars.id`, FK `driver_id` → `drivers.id` |
+
+Все поля обязательны. Дата хранится в формате `YYYY-MM-DD`, флаги допуска
+и отмены — числами `0` и `1`. У автомобиля одна запись ТО, у автомобиля
+и водителя может быть много поездок. Две активные поездки одного
+автомобиля или водителя на одну дату запрещены индексами схемы.
+
+Скрипт `python -m db.import_json` создает таблицы и переносит данные
+с исходными ID. Повторный запуск заменяет снимок в SQLite содержимым
+JSON одной транзакцией. Запускайте его после изменений в консольной версии,
+которые нужно показать на сайте.
+
+### Запросы сайта
+
+Запросы с комментариями хранятся в `sql/queries.sql`. Значения даты, ID,
+вместимости и порога передаются отдельно через параметры `?`.
+
+| Запросы | Что выводится |
+| --- | --- |
+| `cars_list`, `trips_list` | Списки автомобилей и всех поездок |
+| `cars_by_capacity`, `available_cars` | Отбор по вместимости и свободные автомобили на дату |
+| `car_detail`, `active_trips`, `trip_detail` | Карточки и активные поездки со связанными данными через `JOIN` |
+| `trip_totals`, `active_distance` | Число поездок по статусам, сумма и средняя длина активных маршрутов |
+| `trips_by_car`, `trips_by_driver` | Группировка по машинам и водителям, отбор групп водителей через `HAVING` |
 
 ## Структура проекта
 
@@ -198,6 +233,13 @@ vehicle-accounting/
 ├── main.py
 ├── storage.py
 ├── utils.py
+├── db/
+│   ├── __init__.py
+│   ├── database.py
+│   └── import_json.py
+├── sql/
+│   ├── schema.sql
+│   └── queries.sql
 ├── vehicle_site/
 │   ├── __init__.py
 │   ├── settings.py
@@ -214,11 +256,13 @@ vehicle-accounting/
 │   └── templates/cars/
 │       ├── car_list.html
 │       ├── car_detail.html
+│       ├── available.html
 │       └── includes/car_card.html
 ├── trips/
 │   └── templates/trips/
 │       ├── trip_list.html
 │       ├── trip_detail.html
+│       ├── statistics.html
 │       └── includes/trip_status.html
 ├── templates/
 │   ├── base.html
@@ -233,7 +277,8 @@ vehicle-accounting/
 ├── data/
 │   ├── cars.json
 │   ├── drivers.json
-│   └── trips.json
+│   ├── trips.json
+│   └── fleet.sqlite
 └── tests/
     ├── test_project.py
     ├── test_drivers.py
@@ -299,7 +344,8 @@ pip install -r requirements.txt
 
 Команды выполняются из папки `vehicle-accounting` с выбранным окружением `.venv`.
 
-Веб-версия:
+Веб-версия. Если нужно создать базу заново или обновить данные из JSON,
+выполните `python -m db.import_json`. Затем запустите Django:
 
 ```powershell
 python manage.py migrate
@@ -308,7 +354,7 @@ python manage.py runserver
 ```
 
 Откройте `http://127.0.0.1:8000/`. Миграции создают только служебные
-таблицы Django; данные автомобилей и поездок хранятся в JSON.
+таблицы Django. Страницы автопарка используют отдельную базу `data/fleet.sqlite`.
 
 Консольная версия:
 
@@ -336,14 +382,15 @@ pytest -v
 - наследование, включаемые шаблоны и передачу объектов через контекст;
 - фильтры, общую навигацию и подключение статических ресурсов.
 
-Веб-тесты используют временные JSON-файлы и Django Test Client; рабочие данные и база не меняются.
+Веб-тесты создают временную SQLite-базу из JSON и используют Django Test Client.
+Они проверяют импорт, фильтры, поиск свободных автомобилей и статистику.
 
 ## Проверка качества кода
 
 Для проверки оформления используется flake8:
 
 ```powershell
-flake8 .
+flake8 . --extend-exclude=venv
 ```
 
 ## Git

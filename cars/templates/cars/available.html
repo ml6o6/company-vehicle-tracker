@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Свободные автомобили — Учет автомобилей{% endblock %}
+
+{% block content %}
+    <h1>Свободные автомобили</h1>
+    <p>Поиск автомобилей без активных поездок на выбранную дату.</p>
+    <form method="get" action="{% url 'cars:available' %}" class="mb-4">
+        <label for="date" class="form-label">Дата поездки</label>
+        <div class="d-flex flex-wrap gap-2">
+            <input id="date" name="date" type="date" value="{{ trip_date }}"
+                   class="form-control w-auto" required>
+            <button class="btn btn-primary" type="submit">Найти</button>
+        </div>
+    </form>
+    {% if error %}
+        <p class="alert alert-warning" role="alert">{{ error }}</p>
+    {% elif trip_date %}
+        <h2 class="h4">Свободно на {{ trip_date }}: {{ cars|length }}</h2>
+        {% for car in cars %}
+            {% include "cars/includes/car_card.html" %}
+        {% empty %}
+            <p>На выбранную дату свободных автомобилей нет.</p>
+        {% endfor %}
+    {% endif %}
+    <a class="btn btn-outline-secondary" href="{% url 'cars:cars' %}">К списку автомобилей</a>
+{% endblock %}

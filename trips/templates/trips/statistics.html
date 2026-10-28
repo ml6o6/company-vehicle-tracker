@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Статистика поездок — Учет автомобилей{% endblock %}
+
+{% block content %}
+    <h1>Статистика поездок</h1>
+    <ul>
+        <li>Всего поездок: {{ totals.total }}</li>
+        <li>Активных: {{ totals.active }}</li>
+        <li>Отмененных: {{ totals.cancelled }}</li>
+        <li>Общий пробег активных поездок: {{ distance.total_distance }} км</li>
+        <li>Средняя длина активного маршрута: {{ distance.average_distance|floatformat:1 }} км</li>
+    </ul>
+
+    <h2 class="h4">Активные поездки по автомобилям</h2>
+    <ul class="list-group mb-4">
+        {% for car in by_car %}
+            <li class="list-group-item">
+                <a href="{% url 'cars:car_detail' car.id %}">{{ car.model }} · {{ car.plate }}</a>
+                — {{ car.trip_count }}
+            </li>
+        {% empty %}
+            <li class="list-group-item">Автомобилей пока нет.</li>
+        {% endfor %}
+    </ul>
+
+    <h2 class="h4">Активные поездки по водителям</h2>
+    <form method="get" action="{% url 'trips:statistics' %}" class="mb-3">
+        <label for="min_trips" class="form-label">Минимум поездок на водителя</label>
+        <div class="d-flex flex-wrap gap-2">
+            <input id="min_trips" name="min_trips" type="number" min="0"
+                   value="{{ min_trips }}" class="form-control w-auto">
+            <button type="submit" class="btn btn-primary">Отобрать</button>
+        </div>
+    </form>
+    {% if error %}
+        <p class="alert alert-warning" role="alert">{{ error }}</p>
+    {% else %}
+        <ul class="list-group mb-3">
+            {% for driver in by_driver %}
+                <li class="list-group-item">{{ driver.name }} — {{ driver.trip_count }}</li>
+            {% empty %}
+                <li class="list-group-item">По заданному условию водителей нет.</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}
